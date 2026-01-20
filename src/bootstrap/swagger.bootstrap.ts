@@ -10,6 +10,4 @@ export const bootstrapSwagger = async (app: INestApplication) => {
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, documentFactory);
-
-  await app.listen(process.env.PORT ?? 3000);
 };
