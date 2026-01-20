@@ -1,8 +1,31 @@
 import { Type } from 'class-transformer';
-import { IsNumber } from 'class-validator';
+import { IsEnum, IsNumber, IsString, ValidateNested } from 'class-validator';
+import { JwtConfigDto, PostgresConfigDto } from './index';
+
+export enum Environment {
+  prod = 'prod',
+  dev = 'dev',
+}
 
 export class AppConfigDto {
+  @IsEnum(Environment)
+  env: Environment;
+
   @IsNumber()
   @Type(() => Number)
   readonly port: number;
+
+  @IsString()
+  rabbitUrl: string;
+
+  @IsString()
+  redisUrl: string;
+
+  @ValidateNested()
+  @Type(() => JwtConfigDto)
+  jwt: JwtConfigDto;
+
+  @ValidateNested()
+  @Type(() => PostgresConfigDto)
+  postgres: PostgresConfigDto;
 }
