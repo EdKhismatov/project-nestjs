@@ -3,8 +3,8 @@ import { IsEnum, IsNumber, IsString, ValidateNested } from 'class-validator';
 import { JwtConfigDto, PostgresConfigDto } from './index';
 
 export enum Environment {
-  prod = 'prod',
-  dev = 'dev',
+  PROD = 'prod',
+  DEV = 'dev',
 }
 
 export class AppConfigDto {
