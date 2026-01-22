@@ -1,17 +1,24 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { compare, hash } from 'bcrypt';
 import { decode, sign, verify } from 'jsonwebtoken';
+import { CacheTime } from '../../cache/cache.constants';
+import { cacheRefreshToken } from '../../cache/cache.keys';
+import { RedisService } from '../../cache/redis.service';
 import { appConfig } from '../../config';
 import { UserEntity } from '../../database/entities/user.entity';
 import { ConflictException, UnauthorizedException } from '../../exceptions';
 import { UserService } from '../users/user.service';
 import { JwtPayload, TokenPair } from './auth.types';
 import { LoginDto, UserCreateDto } from './dto';
+import { TokenDto } from './dto/token.dto';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly redisService: RedisService,
+  ) {}
   // Регистрация пользователя
   async register(dto: UserCreateDto) {
     const userPresence = await this.userService.findOneByEmail(dto.email);
@@ -56,7 +63,63 @@ export class AuthService {
     }
     const tokens = await this.upsertTokenPair(user);
 
+    await this.redisService.set(cacheRefreshToken(tokens.refreshToken), { id: user.id }, { EX: CacheTime.day8 });
+
+    this.logger.log(`refresh токен записан в базу`);
     this.logger.log(`Пользователь найден ${dto.email}`);
+
+    return tokens;
+  }
+
+  // логаут
+  async logout(refreshToken: string) {
+    return await this.redisService.delete(cacheRefreshToken(refreshToken));
+  }
+
+  // профиль
+  async profile(id: string) {
+    const user = await this.userService.getById(id);
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    const { password, ...result } = user.get({ plain: true });
+    if (!result.active) {
+      this.logger.log(`Вы заблокированы`);
+      throw new UnauthorizedException('You are blocked');
+    }
+    this.logger.log(`Профиль по id найден`);
+    return result;
+  }
+
+  // refresh
+  async refresh(refreshtoken: TokenDto) {
+    const cacheKey = cacheRefreshToken(refreshtoken.token);
+
+    const session = await this.redisService.get<{ id: string }>(cacheKey);
+
+    if (!session) {
+      this.logger.warn(`Попытка использования невалидного Refresh токена`);
+      throw new UnauthorizedException('Session expired or token reused');
+    }
+
+    await this.redisService.delete(cacheRefreshToken(refreshtoken.token));
+    const user = await this.userService.getById(session.id);
+
+    if (!user) {
+      throw new UnauthorizedException('User is inactive or not found');
+    }
+    const { password, ...result } = user.get({ plain: true });
+
+    if (!result.active) {
+      this.logger.log(`Вы заблокированы`);
+      throw new UnauthorizedException('You are blocked');
+    }
+
+    const tokens = await this.upsertTokenPair(user);
+    this.logger.log(`Токены обновлены`);
+
+    await this.redisService.set(cacheRefreshToken(tokens.refreshToken), { id: user.id }, { EX: CacheTime.day8 });
+    this.logger.log(`Обновленные токены занесены в базу`);
     return tokens;
   }
 
