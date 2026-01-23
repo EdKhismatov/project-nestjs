@@ -6,19 +6,19 @@ export class UserCreateDto {
   @ApiProperty({ description: 'Введите свое имя' })
   @IsString()
   @Length(6, 100)
-  name: string;
+  declare name: string;
 
   @ApiProperty({ description: 'Введите email' })
   @IsEmail()
-  email: string;
+  declare email: string;
 
   @ApiProperty({ format: 'password', description: 'Введите пароль' })
   @IsString()
   @Length(6, 512)
-  password: string;
+  declare password: string;
 
   @ApiProperty({ description: 'Выберите роль' })
   @IsString()
   @IsEnum(RolesUser)
-  role: RolesUser;
+  declare role: RolesUser;
 }

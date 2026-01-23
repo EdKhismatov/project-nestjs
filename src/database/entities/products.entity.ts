@@ -2,7 +2,7 @@ import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize
 import { CategoryEntity } from './category.entity';
 import { UserEntity } from './user.entity';
 
-@Table({ tableName: 'products' })
+@Table({ tableName: 'products', paranoid: true })
 export class ProductsEntity extends Model {
   @Column({
     type: DataType.UUID,
@@ -12,25 +12,31 @@ export class ProductsEntity extends Model {
   declare public id: string;
 
   @Column({ type: DataType.STRING, allowNull: false })
-  public title: string;
+  declare public title: string;
 
   @Column({ type: DataType.TEXT, allowNull: false, defaultValue: 'Описание отсутствует' })
-  public description: string;
+  declare public description: string;
 
   @Column({ type: DataType.INTEGER, allowNull: false })
-  public count: number;
+  declare public count: number;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  declare deletedAt: Date;
 
   @ForeignKey(() => UserEntity)
   @Column({ type: DataType.UUID, allowNull: false })
-  public userId: string;
+  declare public userId: string;
 
   @BelongsTo(() => UserEntity, { as: 'seller', foreignKey: 'userId' })
-  public seller: UserEntity;
+  declare public seller: UserEntity;
 
   @ForeignKey(() => CategoryEntity)
   @Column({ type: DataType.UUID, allowNull: false })
-  public categoryId: string;
+  declare public categoryId: string;
 
   @BelongsTo(() => CategoryEntity, { as: 'category', foreignKey: 'categoryId' })
-  public category: CategoryEntity;
+  declare public category: CategoryEntity;
 }

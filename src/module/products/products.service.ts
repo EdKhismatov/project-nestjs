@@ -99,8 +99,7 @@ export class ProductsService {
     }
     this.logger.log(`Товар с ID ${idDto.id} найден`);
 
-    const plainProduct = product.get({ plain: true });
-    await this.redisService.set(key, plainProduct, { EX: CacheTime.min5 });
+    await this.redisService.set(key, product, { EX: CacheTime.min5 });
 
     this.logger.log(`Записали в Redis`);
     return product;
@@ -122,15 +121,14 @@ export class ProductsService {
       throw new NotFoundException(`Товар с ID ${idDto.id} не найден`);
     }
 
-    const plainProduct = product.get({ plain: true });
-
-    if (plainProduct.userId !== user.id && user.role !== 'admin') {
+    if (product.userId !== user.id && user.role !== 'admin') {
       throw new ForbiddenException(`У вас недостаточно прав для удаления этого товара`);
     }
     await this.productsEntity.destroy({ where: { id: idDto.id } });
 
     await this.redisService.delete(cacheProductsId(idDto.id));
 
+    this.logger.log(`Товар c id:${idDto.id} успешно удален из Redis`);
     this.logger.log(`Товар c id:${idDto.id} успешно удален`);
     return { success: true };
   }
@@ -161,17 +159,20 @@ export class ProductsService {
     if (!product) {
       throw new NotFoundException(`Товар с ID ${idDto.id} не найден`);
     }
-    const plainProduct = product.get({ plain: true });
 
-    if (plainProduct.userId !== user.id && user.role !== 'admin') {
+    if (product.userId !== user.id && user.role !== 'admin') {
       throw new ForbiddenException(`У вас нет прав на редактирование этого товара`);
     }
 
     await product.update(dto);
+    this.logger.log(`Товар усппешно изменен`);
 
-    await this.redisService.delete(cacheProductsId(idDto.id));
-    await this.redisService.delete(cacheProductsMy(user.id));
+    Promise.all([
+      this.redisService.delete(cacheProductsId(idDto.id)),
+      this.redisService.delete(cacheProductsMy(user.id)),
+    ]);
 
+    this.logger.log(`Удален из Redis`);
     return product;
   }
 }
