@@ -1,8 +1,11 @@
-import { Body, Controller, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '../../guards/jwt.guard';
+import { Roles } from '../../guards/roles.decorator';
+import { RolesGuard } from '../../guards/roles.guard';
 import { IdDto } from './dto';
 import { CreateProductDto } from './dto/create-product.dto';
+import { GetProductsQueryDto } from './dto/get-products.query.dto';
 import type { ProductRequest } from './dto/product.types';
 import { ProductsService } from './products.service';
 
@@ -14,9 +17,9 @@ export class ProductsController {
   // все товары (сделать пагинацию)
   @ApiCreatedResponse({ description: 'Goods loaded successfully' })
   @ApiOperation({ summary: 'Товары загружены' })
-  @Get('')
-  async getProductsAll() {
-    return await this.productsService.getProductsAll();
+  @Get()
+  async getProductsAll(@Query() query: GetProductsQueryDto) {
+    return await this.productsService.getProductsAll(query);
   }
 
   // товар по id, с категорией и владельцем
@@ -28,11 +31,32 @@ export class ProductsController {
   }
 
   // создание товара
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(['seller', 'admin'])
   @ApiCreatedResponse({ description: 'Item loaded successfully' })
   @ApiOperation({ summary: 'Создание товара' })
   @Post('')
   async createProducts(@Body() body: CreateProductDto, @Request() req: ProductRequest) {
     return await this.productsService.createProducts(body, req.user.id);
+  }
+
+  // удаление товара
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(['seller', 'admin'])
+  @ApiCreatedResponse({ description: 'Item loaded successfully' })
+  @ApiOperation({ summary: 'Удаление товара' })
+  @Delete(':id')
+  async delete(@Param() params: IdDto, @Request() req: ProductRequest) {
+    return await this.productsService.delete(params, req.user);
+  }
+
+  // товары продавца
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(['seller', 'admin'])
+  @ApiCreatedResponse({ description: 'Products loaded' })
+  @ApiOperation({ summary: 'Товары продавца' })
+  @Get('my')
+  async getMyProduct(@Request() req: ProductRequest) {
+    return await this.productsService.getMyProduct(req.user);
   }
 }
