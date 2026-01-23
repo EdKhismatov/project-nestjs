@@ -1,12 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Roles } from '../../decorators/roles.decorator';
 import { AuthGuard } from '../../guards/jwt.guard';
-import { Roles } from '../../guards/roles.decorator';
 import { RolesGuard } from '../../guards/roles.guard';
 import { IdDto } from './dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { GetProductsQueryDto } from './dto/get-products.query.dto';
 import type { ProductRequest } from './dto/product.types';
+import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductsService } from './products.service';
 
 @ApiTags('products')
@@ -58,5 +59,15 @@ export class ProductsController {
   @Get('my')
   async getMyProduct(@Request() req: ProductRequest) {
     return await this.productsService.getMyProduct(req.user);
+  }
+
+  // редактирование своего товара
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(['seller', 'admin'])
+  @ApiCreatedResponse({ description: 'Product has been edited' })
+  @ApiOperation({ summary: 'Редактирование товара' })
+  @Patch(':id')
+  async updateMyProduct(@Param() params: IdDto, @Body() dto: UpdateProductDto, @Request() req: ProductRequest) {
+    return await this.productsService.updateMyProduct(params, dto, req.user);
   }
 }

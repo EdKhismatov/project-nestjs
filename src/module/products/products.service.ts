@@ -12,6 +12,7 @@ import { IdDto } from './dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { GetProductsQueryDto } from './dto/get-products.query.dto';
 import { IActiveUser } from './dto/product.types';
+import { UpdateProductDto } from './dto/update-product.dto';
 
 @Injectable()
 export class ProductsService {
@@ -152,5 +153,25 @@ export class ProductsService {
     this.logger.log(`Записали в Redis`);
 
     return products;
+  }
+
+  // редактирование тавара
+  async updateMyProduct(idDto: IdDto, dto: UpdateProductDto, user: IActiveUser) {
+    const product = await this.productsEntity.findByPk(idDto.id);
+    if (!product) {
+      throw new NotFoundException(`Товар с ID ${idDto.id} не найден`);
+    }
+    const plainProduct = product.get({ plain: true });
+
+    if (plainProduct.userId !== user.id && user.role !== 'admin') {
+      throw new ForbiddenException(`У вас нет прав на редактирование этого товара`);
+    }
+
+    await product.update(dto);
+
+    await this.redisService.delete(cacheProductsId(idDto.id));
+    await this.redisService.delete(cacheProductsMy(user.id));
+
+    return product;
   }
 }
