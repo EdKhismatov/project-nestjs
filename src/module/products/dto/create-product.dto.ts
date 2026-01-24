@@ -24,10 +24,14 @@ export class CreateProductDto {
   @IsUUID()
   categoryId: string;
 
-  @ApiProperty()
-  @IsUUID()
-  userId: string;
-
+  @ApiProperty({
+    type: 'array',
+    items: {
+      type: 'string',
+      format: 'binary',
+    },
+    description: 'Массив изображений товара',
+  })
   @IsOptional()
   @IsArray()
   images?: string[];

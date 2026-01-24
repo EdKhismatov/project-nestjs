@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Request, UseGuards } from '@nestjs/common';
-import { ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../decorators/roles.decorator';
 import { BadRequestException } from '../../exceptions';
 import { AuthGuard } from '../../guards/jwt.guard';
@@ -38,6 +38,8 @@ export class ProductsController {
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(['seller', 'admin'])
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: CreateProductDto })
   @ApiCreatedResponse({ description: 'Item loaded successfully' })
   @ApiOperation({ summary: 'Создание товара' })
   @Post('')
@@ -51,7 +53,6 @@ export class ProductsController {
         const fileName = await this.filesService.createFile(part);
         fileNames.push(fileName);
       } else {
-        // Это текстовое поле
         body[part.fieldname] = (part as any).value;
       }
     }
@@ -60,7 +61,7 @@ export class ProductsController {
       description: body.description,
       price: Number(body.price) || 0,
       count: Number(body.count) || 0,
-      userId: body.userId,
+      userId: req.user.id,
       categoryId: body.categoryId,
       images: fileNames,
     };
