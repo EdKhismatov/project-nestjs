@@ -12,24 +12,24 @@ export class CategoryEntity extends Model {
   declare public id: string;
 
   @Column({ type: DataType.STRING, allowNull: false })
-  public title: string;
+  declare public title: string;
 
   @Column({ type: DataType.STRING, allowNull: false, unique: true })
-  public slug: string;
+  declare public slug: string;
 
   @Column({ type: DataType.TEXT, allowNull: false, defaultValue: 'Описание отсутствует' })
-  public description: string;
+  declare public description: string;
 
   @Column({ type: DataType.STRING, allowNull: false, defaultValue: 'Иконка отсутствует' })
-  public icon: string;
+  declare public icon: string;
 
   @ForeignKey(() => UserEntity)
   @Column({ type: DataType.UUID, allowNull: false })
-  public userId: string;
+  declare public userId: string;
 
   @BelongsTo(() => UserEntity, { as: 'creator', foreignKey: 'userId' })
-  public owner: UserEntity;
+  declare public owner: UserEntity;
 
   @HasMany(() => ProductsEntity, { foreignKey: 'categoryId', as: 'products', onDelete: 'CASCADE' })
-  public products: ProductsEntity[];
+  declare public products: ProductsEntity[];
 }
