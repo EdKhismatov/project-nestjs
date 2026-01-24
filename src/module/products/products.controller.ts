@@ -44,13 +44,9 @@ export class ProductsController {
   async createProducts(@Req() req: any) {
     const body: Record<string, any> = {};
     const fileNames: string[] = [];
-
-    // ИСПОЛЬЗУЕМ parts() ВМЕСТО files() — это критично!
     const parts = req.parts();
 
     for await (const part of parts) {
-      console.log('Поймали часть:', part.fieldname, 'Тип:', part.type); // Лог для отладки
-
       if (part.type === 'file') {
         const fileName = await this.filesService.createFile(part);
         fileNames.push(fileName);
@@ -72,7 +68,6 @@ export class ProductsController {
     if (!productData.title) {
       throw new BadRequestException('Поле title не дошло до сервера!');
     }
-
     return this.productsService.createProduct(productData as CreateProductDto);
   }
 
