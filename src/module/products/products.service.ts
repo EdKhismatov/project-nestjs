@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
+import * as process from 'node:process';
 import { Op } from 'sequelize';
 import { CacheTime } from '../../cache/cache.constants';
 import { cacheProductsAll, cacheProductsId, cacheProductsMy } from '../../cache/cache.keys';
@@ -8,6 +9,7 @@ import { CategoryEntity } from '../../database/entities/category.entity';
 import { ProductsEntity } from '../../database/entities/products.entity';
 import { UserEntity } from '../../database/entities/user.entity';
 import { ForbiddenException, NotFoundException } from '../../exceptions';
+import { FilesService } from '../../upload/files.service';
 import { IdDto } from './dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { GetProductsQueryDto } from './dto/get-products.query.dto';
@@ -29,6 +31,8 @@ export class ProductsService {
     private userEntity: typeof UserEntity,
 
     private readonly redisService: RedisService,
+
+    private filesService: FilesService,
   ) {}
 
   // все товары
@@ -56,8 +60,16 @@ export class ProductsService {
       order: [['createdAt', 'DESC']],
     });
 
+    const baseUrl = `http://localhost:${process.env.PORT}/uploads/`;
+
+    const resultRows = rows.map((product) => {
+      const productData = product.toJSON();
+      productData.images = product.images.map((fileName) => `${baseUrl}${fileName}`);
+      return productData;
+    });
+
     const productAll = {
-      items: rows,
+      items: resultRows,
       total: count,
       currentPage: page,
       totalPages: Math.ceil(count / limit),
@@ -105,9 +117,8 @@ export class ProductsService {
     return product;
   }
 
-  // создание товара
-  async createProducts(body: CreateProductDto, userId: string) {
-    const product = await this.productsEntity.create({ ...body, userId });
+  async createProduct(body: CreateProductDto) {
+    const product = await this.productsEntity.create({ ...body });
     this.logger.log(`Товар успешно создан`);
     return product;
   }
@@ -124,6 +135,12 @@ export class ProductsService {
     if (product.userId !== user.id && user.role !== 'admin') {
       throw new ForbiddenException(`У вас недостаточно прав для удаления этого товара`);
     }
+
+    if (product.images && product.images.length > 0) {
+      const deletePromises = product.images.map((img) => this.filesService.removeFile(img));
+      await Promise.all(deletePromises);
+    }
+
     await this.productsEntity.destroy({ where: { id: idDto.id } });
 
     await this.redisService.delete(cacheProductsId(idDto.id));

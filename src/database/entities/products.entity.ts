@@ -26,6 +26,12 @@ export class ProductsEntity extends Model {
   })
   declare deletedAt: Date;
 
+  @Column({
+    type: DataType.ARRAY(DataType.STRING),
+    defaultValue: [],
+  })
+  declare images: string[];
+
   @ForeignKey(() => UserEntity)
   @Column({ type: DataType.UUID, allowNull: false })
   declare public userId: string;

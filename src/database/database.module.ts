@@ -11,6 +11,7 @@ import { appConfig } from '../config';
         autoLoadModels: true,
         synchronize: true,
         logging: false,
+        // sync: { alter: true },
       }),
     }),
   ],

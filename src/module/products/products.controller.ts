@@ -1,8 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Request, UseGuards } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../decorators/roles.decorator';
+import { BadRequestException } from '../../exceptions';
 import { AuthGuard } from '../../guards/jwt.guard';
 import { RolesGuard } from '../../guards/roles.guard';
+import { FilesService } from '../../upload/files.service';
 import { IdDto } from './dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { GetProductsQueryDto } from './dto/get-products.query.dto';
@@ -13,7 +15,10 @@ import { ProductsService } from './products.service';
 @ApiTags('products')
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly productsService: ProductsService,
+    private filesService: FilesService,
+  ) {}
 
   // все товары (сделать пагинацию)
   @ApiCreatedResponse({ description: 'Goods loaded successfully' })
@@ -31,14 +36,44 @@ export class ProductsController {
     return await this.productsService.getProductsId(params);
   }
 
-  // создание товара
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(['seller', 'admin'])
   @ApiCreatedResponse({ description: 'Item loaded successfully' })
   @ApiOperation({ summary: 'Создание товара' })
   @Post('')
-  async createProducts(@Body() body: CreateProductDto, @Request() req: ProductRequest) {
-    return await this.productsService.createProducts(body, req.user.id);
+  async createProducts(@Req() req: any) {
+    const body: Record<string, any> = {};
+    const fileNames: string[] = [];
+
+    // ИСПОЛЬЗУЕМ parts() ВМЕСТО files() — это критично!
+    const parts = req.parts();
+
+    for await (const part of parts) {
+      console.log('Поймали часть:', part.fieldname, 'Тип:', part.type); // Лог для отладки
+
+      if (part.type === 'file') {
+        const fileName = await this.filesService.createFile(part);
+        fileNames.push(fileName);
+      } else {
+        // Это текстовое поле
+        body[part.fieldname] = (part as any).value;
+      }
+    }
+    const productData = {
+      title: body.title,
+      description: body.description,
+      price: Number(body.price) || 0,
+      count: Number(body.count) || 0,
+      userId: body.userId,
+      categoryId: body.categoryId,
+      images: fileNames,
+    };
+
+    if (!productData.title) {
+      throw new BadRequestException('Поле title не дошло до сервера!');
+    }
+
+    return this.productsService.createProduct(productData as CreateProductDto);
   }
 
   // удаление товара

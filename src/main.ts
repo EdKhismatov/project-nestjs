@@ -1,7 +1,9 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import contentParser from '@fastify/multipart';
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { FastifyAdapter } from '@nestjs/platform-fastify';
+import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import * as process from 'node:process';
+import { join } from 'path';
 import { AppModule } from './app.module';
 import { bootstrapSwagger } from './bootstrap';
 import { appConfig } from './config';
@@ -12,9 +14,20 @@ async function bootstrap() {
   const pinoStrategy = process.env.NODE_ENV === Environment.DEV ? DEVELOPMENT_STRATEGY : PRODUCTION_STRATEGY;
   const logger = new PinoService(pinoStrategy);
 
-  const app = await NestFactory.create<INestApplication>(AppModule, new FastifyAdapter(), { logger });
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), { logger });
 
   await bootstrapSwagger(app);
+
+  app.useStaticAssets({
+    root: join(__dirname, '..', 'uploads'),
+    prefix: '/uploads/',
+  });
+  // attachFieldsToBody: true,
+  await app.register(contentParser, {
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5 МБ
+    },
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
