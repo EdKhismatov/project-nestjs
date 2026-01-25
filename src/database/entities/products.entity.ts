@@ -20,6 +20,9 @@ export class ProductsEntity extends Model {
   @Column({ type: DataType.INTEGER, allowNull: false })
   declare public count: number;
 
+  @Column({ type: DataType.INTEGER, allowNull: false, defaultValue: 0 })
+  declare public price: number;
+
   @Column({
     type: DataType.DATE,
     allowNull: true,

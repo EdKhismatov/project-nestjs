@@ -1,8 +1,11 @@
+import { MultipartFile } from '@fastify/multipart';
 import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import { join } from 'path';
 import sharp from 'sharp';
+import { PassThrough } from 'stream';
+import { pipeline } from 'stream/promises';
 import * as uuid from 'uuid';
 import { BadRequestException } from '../exceptions';
 
@@ -11,30 +14,43 @@ export class FilesService {
   private readonly ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
   private readonly MAX_SIZE = 5 * 1024 * 1024; // 5 МБ
 
-  async createFile(file: any): Promise<string> {
+  async createFile(file: MultipartFile): Promise<string> {
     if (!this.ALLOWED_TYPES.includes(file.mimetype)) {
-      throw new BadRequestException(`Недопустимый формат файла: ${file.mimetype}. Разрешены: JPG, PNG, WEBP`);
-    }
-
-    const buffer = await file.toBuffer();
-
-    if (buffer.length > this.MAX_SIZE) {
-      throw new BadRequestException('Файл слишком большой. Максимальный размер: 5 МБ');
+      throw new BadRequestException(`Недопустимый формат: ${file.mimetype}`);
     }
 
     const fileName = uuid.v4() + '.webp';
-
     const uploadDir = path.resolve(__dirname, '..', '..', 'uploads');
-
     const fullPath = path.join(uploadDir, fileName);
 
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    await sharp(buffer).resize(800).webp({ quality: 80 }).toFile(fullPath);
+    const sizeValidator = new PassThrough();
+    let downloadedBytes = 0;
 
-    return fileName;
+    sizeValidator.on('data', (chunk) => {
+      downloadedBytes += chunk.length;
+      if (downloadedBytes > this.MAX_SIZE) {
+        sizeValidator.destroy(new BadRequestException('Файл слишком большой (max 5MB)'));
+      }
+    });
+
+    try {
+      await pipeline(
+        file.file,
+        sizeValidator,
+        sharp().resize(800).webp({ quality: 80 }),
+        fs.createWriteStream(fullPath),
+      );
+      return fileName;
+    } catch (err) {
+      if (fs.existsSync(fullPath)) {
+        await fs.promises.unlink(fullPath);
+      }
+      throw err;
+    }
   }
 
   // Новый метод для массива файлов

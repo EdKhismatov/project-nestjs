@@ -184,12 +184,16 @@ export class ProductsService {
     await product.update(dto);
     this.logger.log(`Товар усппешно изменен`);
 
-    Promise.all([
+    await Promise.all([
       this.redisService.delete(cacheProductsId(idDto.id)),
       this.redisService.delete(cacheProductsMy(user.id)),
     ]);
 
     this.logger.log(`Удален из Redis`);
     return product;
+  }
+
+  async onApplicationShutdown() {
+    this.logger.log('--- Завершение работы ProductService ---');
   }
 }

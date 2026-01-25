@@ -23,6 +23,8 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
   // attachFieldsToBody: true,
+  app.enableShutdownHooks();
+
   await app.register(contentParser, {
     limits: {
       fileSize: 5 * 1024 * 1024, // 5 МБ
