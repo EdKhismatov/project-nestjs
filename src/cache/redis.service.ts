@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
 import type { RedisClientType, SetOptions } from '@redis/client';
 import { REDIS } from './cache.provider';
 
 @Injectable()
-export class RedisService {
+export class RedisService implements OnApplicationShutdown {
+  logger = new Logger(RedisService.name);
   @Inject(REDIS)
   private readonly redis: RedisClientType;
 
@@ -15,13 +15,16 @@ export class RedisService {
   }
 
   async get<T extends Record<string, any>>(key: string): Promise<T | null> {
-    const value = await this.redis.get(key);
-
-    if (value === null) {
+    try {
+      const value = await this.redis.get(key);
+      if (value === null) {
+        return null;
+      }
+      return JSON.parse(value) as T;
+    } catch (error) {
+      this.logger.log(`Ошибка при чтении ключа ${key} из Redis:`, error);
       return null;
     }
-
-    return JSON.parse(value);
   }
 
   async delete(key: string): Promise<number> {
@@ -35,5 +38,15 @@ export class RedisService {
     }
 
     return keys.length;
+  }
+
+  async onApplicationShutdown() {
+    this.logger.log('--- Завершение работы Redis ---');
+    try {
+      await this.redis.quit();
+      this.logger.log('--- Соединение с Redis успешно закрыто ---');
+    } catch (error) {
+      this.logger.error('Ошибка при закрытии Redis:', error);
+    }
   }
 }
