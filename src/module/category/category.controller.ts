@@ -1,12 +1,25 @@
-import { Body, Controller, Get, NotFoundException, Param, Post, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  NotFoundException,
+  Param,
+  Patch,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../decorators/roles.decorator';
 import { AuthGuard } from '../../guards/jwt.guard';
+import { RolesUser } from '../../guards/role.guard';
 import { RolesGuard } from '../../guards/roles.guard';
 import { IdDto } from '../products/dto';
 import { CategoryService } from './category.service';
 import type { CategoryRequest } from './dto/category.types';
 import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @ApiTags('category')
 @Controller('category')
@@ -15,7 +28,7 @@ export class CategoryController {
 
   // создание категории
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(['admin'])
+  @Roles([RolesUser.admin])
   @ApiCreatedResponse({ description: 'Item loaded successfully' })
   @ApiOperation({ summary: 'Создание категории' })
   @Post('')
@@ -41,5 +54,25 @@ export class CategoryController {
       throw new NotFoundException(`Категория с ID ${id.id} не найдена`);
     }
     return result;
+  }
+
+  // редактирование категории
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles([RolesUser.admin])
+  @ApiOkResponse({ description: 'Категория успешно изменена' })
+  @ApiOperation({ summary: 'Изменение категории' })
+  @Patch(':id')
+  async updateCategoryId(@Param() id: IdDto, @Body() query: UpdateCategoryDto) {
+    return await this.categoryService.updateCategoryId(id, query);
+  }
+
+  // удаление категории
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles([RolesUser.admin])
+  @ApiOkResponse({ description: 'Категория успешно удалена' })
+  @ApiOperation({ summary: 'Удаление категории' })
+  @Delete(':id')
+  async deleteCategoryId(@Param() id: IdDto) {
+    return await this.categoryService.deleteCategoryId(id);
   }
 }

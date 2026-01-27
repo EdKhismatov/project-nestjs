@@ -19,6 +19,6 @@ export class UserCreateDto {
 
   @ApiProperty({ description: 'Выберите роль' })
   @IsString()
-  @IsEnum(RolesUser)
+  @IsEnum([RolesUser.seller, RolesUser.user])
   role: RolesUser;
 }

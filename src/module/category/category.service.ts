@@ -5,8 +5,10 @@ import { cacheCategoriesAll, cacheCategoriesId } from '../../cache/cache.keys';
 import { RedisService } from '../../cache/redis.service';
 import { CategoryEntity } from '../../database/entities/category.entity';
 import { ProductsEntity } from '../../database/entities/products.entity';
+import { NotFoundException } from '../../exceptions';
 import { IdDto } from '../products/dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @Injectable()
 export class CategoryService {
@@ -93,6 +95,37 @@ export class CategoryService {
       this.logger.log(`Ошибка при получении категории и товаров: ${error.message}`);
       throw new InternalServerErrorException('Ошибка при чтении категорий');
     }
+  }
+
+  // изменение категории
+  async updateCategoryId(id: IdDto, query: UpdateCategoryDto) {
+    const category = await this.categoryEntity.findByPk(id.id);
+    if (!category) {
+      throw new NotFoundException(`Категория с ID ${id.id} не найдена`);
+    }
+    this.redisService.delete(cacheCategoriesId(id.id));
+    this.logger.log(`Категория с id:${id.id} удалена из Redis`);
+    await category.update(query);
+    this.logger.log(`Категория усппешно изменена`);
+    return category;
+  }
+
+  // удаление категории
+  async deleteCategoryId(id: IdDto) {
+    const category = await this.categoryEntity.findByPk(id.id);
+    if (!category) {
+      throw new NotFoundException(`Категория с ID ${id.id} не найдена`);
+    }
+
+    await category.destroy();
+    try {
+      await this.redisService.delete(cacheCategoriesId(id.id));
+      this.logger.log(`Категория с id:${id.id} удалена из Redis`);
+    } catch (err) {
+      this.logger.error(`Ошибка при удалении из Redis для id:${id.id}`, err);
+    }
+
+    return category;
   }
 
   async onApplicationShutdown() {

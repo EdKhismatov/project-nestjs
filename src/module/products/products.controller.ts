@@ -3,6 +3,7 @@ import { ApiBody, ApiConsumes, ApiCreatedResponse, ApiOperation, ApiTags } from 
 import { Roles } from '../../decorators/roles.decorator';
 import { BadRequestException } from '../../exceptions';
 import { AuthGuard } from '../../guards/jwt.guard';
+import { RolesUser } from '../../guards/role.guard';
 import { RolesGuard } from '../../guards/roles.guard';
 import { FilesService } from '../../upload/files.service';
 import { IdDto } from './dto';
@@ -37,7 +38,7 @@ export class ProductsController {
   }
 
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(['seller', 'admin'])
+  @Roles([RolesUser.seller, RolesUser.admin])
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateProductDto })
   @ApiCreatedResponse({ description: 'Item loaded successfully' })
@@ -74,7 +75,7 @@ export class ProductsController {
 
   // удаление товара
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(['seller', 'admin'])
+  @Roles([RolesUser.seller, RolesUser.admin])
   @ApiCreatedResponse({ description: 'Item loaded successfully' })
   @ApiOperation({ summary: 'Удаление товара' })
   @Delete(':id')
@@ -84,7 +85,7 @@ export class ProductsController {
 
   // товары продавца
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(['seller', 'admin'])
+  @Roles([RolesUser.seller, RolesUser.admin])
   @ApiCreatedResponse({ description: 'Products loaded' })
   @ApiOperation({ summary: 'Товары продавца' })
   @Get('my')
@@ -94,7 +95,7 @@ export class ProductsController {
 
   // редактирование своего товара
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(['seller', 'admin'])
+  @Roles([RolesUser.seller, RolesUser.admin])
   @ApiCreatedResponse({ description: 'Product has been edited' })
   @ApiOperation({ summary: 'Редактирование товара' })
   @Patch(':id')
