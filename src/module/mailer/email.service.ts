@@ -6,14 +6,16 @@ export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   constructor(private readonly mailerService: MailerService) {}
 
-  async sendWelcomeEmail(to: string) {
+  async sendWelcomeEmail(to: string, token: string) {
     try {
       await this.mailerService.sendMail({
         to,
         subject: 'Добро пожаловать!',
-        template: './welcome', // Если добавишь шаблоны позже
-        context: { name: 'Друг' },
-        text: 'Приветик! Спасибо, что ты с нами.',
+        html: `
+      <h1>Приветик!</h1>
+      <p>Чтобы подтвердить почту, перейди по ссылке:</p>
+      <a href="${token}">Подтвердить регистрацию</a>
+    `,
       });
       this.logger.log(`Письмо успешно отправлено на ${to}`);
     } catch (error) {

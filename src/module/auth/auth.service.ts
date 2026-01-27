@@ -1,12 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { compare, hash } from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { decode, sign, verify } from 'jsonwebtoken';
 import { CacheTime } from '../../cache/cache.constants';
 import { cacheRefreshToken } from '../../cache/cache.keys';
 import { RedisService } from '../../cache/redis.service';
 import { appConfig } from '../../config';
 import { UserEntity } from '../../database/entities/user.entity';
-import { ConflictException, UnauthorizedException } from '../../exceptions';
+import { BadRequestException, ConflictException, UnauthorizedException } from '../../exceptions';
 import { EmailService } from '../mailer/email.service';
 import { UserService } from '../users/user.service';
 import { JwtPayload, TokenPair } from './auth.types';
@@ -23,6 +24,8 @@ export class AuthService {
   ) {}
   // Регистрация пользователя
   async register(dto: UserCreateDto) {
+    const token = randomBytes(32).toString('hex');
+
     const userPresence = await this.userService.findOneByEmail(dto.email);
 
     if (userPresence) {
@@ -39,9 +42,18 @@ export class AuthService {
 
     const user = await this.userService.register(newUser as UserCreateDto);
 
+    await user.update({ verificationToken: token });
     const { password, ...result } = user.get({ plain: true });
+
     this.logger.log(`Регистрация нового пользователя ${dto.email}`);
-    await this.emailService.sendWelcomeEmail(result.email);
+    const url = `http://localhost:${appConfig.port}/auth/verify?token=${token}`;
+    try {
+      await this.emailService.sendWelcomeEmail(result.email, url);
+      this.logger.log(`Письмо отправлено`);
+    } catch (error) {
+      this.logger.log(`Ошибка,письмо не отправлено`, error.message);
+    }
+
     return result;
   }
 
@@ -53,16 +65,25 @@ export class AuthService {
       throw new UnauthorizedException();
     }
 
-    const { password, active } = user.get({ plain: true });
-
-    const equals = await compare(dto.password, password);
+    const equals = await compare(dto.password, user.password);
     if (!equals) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    if (!active) {
-      throw new UnauthorizedException('You are blocked');
+    if (!user.isVerified) {
+      const token = randomBytes(32).toString('hex');
+      const url = `http://localhost:${appConfig.port}/auth/verify?token=${token}`;
+      try {
+        await user.update({ verificationToken: token });
+        await this.emailService.sendWelcomeEmail(user.email, url);
+        this.logger.log(`Повторное письмо отправлено на ${user.email}`);
+      } catch (e) {
+        this.logger.error(`Не удалось отправить повторное письмо: ${e.message}`);
+      }
+
+      throw new UnauthorizedException('Почта не подтверждена');
     }
+
     const tokens = await this.upsertTokenPair(user);
 
     await this.redisService.set(cacheRefreshToken(tokens.refreshToken), { id: user.id }, { EX: CacheTime.day8 });
@@ -123,6 +144,18 @@ export class AuthService {
     await this.redisService.set(cacheRefreshToken(tokens.refreshToken), { id: user.id }, { EX: CacheTime.day8 });
     this.logger.log(`Обновленные токены занесены в базу`);
     return tokens;
+  }
+
+  // подтверждение почты
+  async confirms(token: string) {
+    const user = await this.userService.findByToken(token);
+    if (!user) {
+      throw new BadRequestException('Ссылка недействительна или уже была использована');
+    }
+    await user.update({ isVerified: true, verificationToken: null });
+    this.logger.log(`Email ${user.email} успешно верифицирован`);
+
+    return { message: 'Почта подтверждена. Теперь вы можете войти в систему.' };
   }
 
   private async upsertTokenPair(user: UserEntity): Promise<TokenPair> {

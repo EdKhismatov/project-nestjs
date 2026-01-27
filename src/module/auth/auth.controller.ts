@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '../../guards/jwt.guard';
 import { AuthService } from './auth.service';
@@ -40,6 +40,7 @@ export class AuthController {
     return true;
   }
 
+  // Удаление рефреш токена
   @ApiCreatedResponse({ description: 'RefreshToken deleted ' })
   @ApiResponse({ status: 200, description: 'Успешный выход' })
   @UseGuards(AuthGuard)
@@ -55,5 +56,15 @@ export class AuthController {
   @Post('refresh')
   async refresh(@Body() refreshToken: TokenDto) {
     return await this.authService.refresh(refreshToken);
+  }
+
+  // Подтверждение почты
+  @ApiCreatedResponse({ description: 'Email confirmed' })
+  @ApiResponse({ status: 200, description: 'Почта подтверждена' })
+  @HttpCode(HttpStatus.OK)
+  @Get('verify')
+  async confirms(@Query('token') token: string) {
+    console.log('token', token);
+    return await this.authService.confirms(token);
   }
 }

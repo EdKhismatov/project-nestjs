@@ -21,4 +21,8 @@ export class UserService {
   async getById(id: string): Promise<UserEntity | null> {
     return this.userModel.findOne({ where: { id } });
   }
+
+  async findByToken(verificationToken: string): Promise<UserEntity | null> {
+    return this.userModel.findOne({ where: { verificationToken } });
+  }
 }

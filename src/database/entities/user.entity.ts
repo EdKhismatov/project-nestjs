@@ -41,6 +41,18 @@ export class UserEntity extends Model {
   })
   declare deletedAt: Date;
 
+  @Column({
+    type: DataType.BOOLEAN,
+    defaultValue: false,
+    allowNull: false,
+  })
+  declare isVerified: boolean;
+
+  @Column({
+    type: DataType.STRING,
+  })
+  declare verificationToken: string;
+
   @HasMany(() => ProductsEntity, { foreignKey: 'userId', as: 'products', onDelete: 'CASCADE' })
   declare public products: ProductsEntity[];
 }
