@@ -37,6 +37,7 @@ export class ProductsController {
     return await this.productsService.getProductsId(params);
   }
 
+  // Создание товара
   @UseGuards(AuthGuard, RolesGuard)
   @Roles([RolesUser.seller, RolesUser.admin])
   @ApiConsumes('multipart/form-data')

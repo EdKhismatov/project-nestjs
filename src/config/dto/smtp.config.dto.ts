@@ -6,4 +6,7 @@ export class SmtpConfigDto {
 
   @IsString()
   pass: string;
+
+  @IsString()
+  email: string;
 }

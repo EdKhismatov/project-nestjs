@@ -7,6 +7,7 @@ import { RedisService } from '../../cache/redis.service';
 import { appConfig } from '../../config';
 import { UserEntity } from '../../database/entities/user.entity';
 import { ConflictException, UnauthorizedException } from '../../exceptions';
+import { EmailService } from '../mailer/email.service';
 import { UserService } from '../users/user.service';
 import { JwtPayload, TokenPair } from './auth.types';
 import { LoginDto, UserCreateDto } from './dto';
@@ -18,6 +19,7 @@ export class AuthService {
   constructor(
     private readonly userService: UserService,
     private readonly redisService: RedisService,
+    private readonly emailService: EmailService,
   ) {}
   // Регистрация пользователя
   async register(dto: UserCreateDto) {
@@ -39,7 +41,7 @@ export class AuthService {
 
     const { password, ...result } = user.get({ plain: true });
     this.logger.log(`Регистрация нового пользователя ${dto.email}`);
-
+    await this.emailService.sendWelcomeEmail(result.email);
     return result;
   }
 
