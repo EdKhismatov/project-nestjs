@@ -25,6 +25,11 @@ const rawConfig: EnvStructure<AppConfigDto> = {
     password: process.env.POSTGRESQL_PASSWORD,
     database: process.env.POSTGRESQL_DATABASE,
   },
+  smtp: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+    email: process.env.SMTP_EMAIL,
+  },
 };
 
 export const appConfig = validate(AppConfigDto, rawConfig);

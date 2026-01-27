@@ -2,7 +2,7 @@ import { Column, DataType, HasMany, Model, Table } from 'sequelize-typescript';
 import { RolesUser } from '../../guards/role.guard';
 import { ProductsEntity } from './products.entity';
 
-@Table({ tableName: 'users' })
+@Table({ tableName: 'users', paranoid: true })
 export class UserEntity extends Model {
   @Column({
     type: DataType.UUID,
@@ -34,6 +34,12 @@ export class UserEntity extends Model {
     defaultValue: RolesUser.user,
   })
   declare public role: RolesUser;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  declare deletedAt: Date;
 
   @HasMany(() => ProductsEntity, { foreignKey: 'userId', as: 'products', onDelete: 'CASCADE' })
   declare public products: ProductsEntity[];

@@ -2,7 +2,7 @@ import { BelongsTo, Column, DataType, ForeignKey, HasMany, Model, Table } from '
 import { ProductsEntity } from './products.entity';
 import { UserEntity } from './user.entity';
 
-@Table({ tableName: 'category' })
+@Table({ tableName: 'category', paranoid: true })
 export class CategoryEntity extends Model {
   @Column({
     type: DataType.UUID,
@@ -22,6 +22,12 @@ export class CategoryEntity extends Model {
 
   @Column({ type: DataType.STRING, allowNull: false, defaultValue: 'Иконка отсутствует' })
   declare public icon: string;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  declare deletedAt: Date;
 
   @ForeignKey(() => UserEntity)
   @Column({ type: DataType.UUID, allowNull: false })
