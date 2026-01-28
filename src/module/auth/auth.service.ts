@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
 import { compare, hash } from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { decode, sign, verify } from 'jsonwebtoken';
@@ -21,6 +22,7 @@ export class AuthService {
     private readonly userService: UserService,
     private readonly redisService: RedisService,
     private readonly emailService: EmailService,
+    @Inject('MAIL_SERVICE') private readonly rabbitClient: ClientProxy,
   ) {}
   // Регистрация пользователя
   async register(dto: UserCreateDto) {
@@ -48,8 +50,10 @@ export class AuthService {
     this.logger.log(`Регистрация нового пользователя ${dto.email}`);
     const url = `http://localhost:${appConfig.port}/auth/verify?token=${token}`;
     try {
-      await this.emailService.sendWelcomeEmail(result.email, url);
-      this.logger.log(`Письмо отправлено`);
+      const payload = { email: user.email, url };
+      this.rabbitClient.emit('send_welcome_email', payload);
+
+      this.logger.log(`Письмо отправлено в RabbitMQ`);
     } catch (error) {
       this.logger.log(`Ошибка,письмо не отправлено`, error.message);
     }
