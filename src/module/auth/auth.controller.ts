@@ -1,5 +1,6 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Req, Request, UseGuards } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import type { FastifyRequest } from 'fastify';
 import { AuthGuard } from '../../guards/jwt.guard';
 import { AuthService } from './auth.service';
 import type { AuthenticatedRequest } from './auth.types';
@@ -25,8 +26,9 @@ export class AuthController {
   @ApiCreatedResponse({ description: 'user authorization' })
   @ApiOperation({ summary: 'Авторизация пользователя' })
   @Post('login')
-  async login(@Body() body: LoginDto) {
-    return await this.authService.login(body);
+  async login(@Body() body: LoginDto, @Req() req: FastifyRequest) {
+    const ip = req.ip;
+    return await this.authService.login(body, ip);
   }
 
   // логаут

@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import { InjectModel } from '@nestjs/sequelize';
 import { compare, hash } from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { decode, sign, verify } from 'jsonwebtoken';
@@ -7,6 +8,7 @@ import { CacheTime } from '../../cache/cache.constants';
 import { cacheRefreshToken } from '../../cache/cache.keys';
 import { RedisService } from '../../cache/redis.service';
 import { appConfig } from '../../config';
+import { HistoryEntity } from '../../database/entities/history.entity';
 import { UserEntity } from '../../database/entities/user.entity';
 import { BadRequestException, ConflictException, UnauthorizedException } from '../../exceptions';
 import { EmailService } from '../mailer/email.service';
@@ -23,6 +25,9 @@ export class AuthService {
     private readonly redisService: RedisService,
     private readonly emailService: EmailService,
     @Inject('MAIL_SERVICE') private readonly rabbitClient: ClientProxy,
+
+    @InjectModel(HistoryEntity)
+    private historyEntity: typeof HistoryEntity,
   ) {}
   // Регистрация пользователя
   async register(dto: UserCreateDto) {
@@ -69,15 +74,27 @@ export class AuthService {
   }
 
   // авторизация по логину и паролю
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto, IpAddress: string) {
     const user = await this.userService.findOneByEmail(dto.email);
 
+    const logAttempt = async (success: boolean, result: string) => {
+      const payload = {
+        email: dto.email,
+        ip: IpAddress,
+        success,
+        loginResult: result,
+      };
+      return this.rabbitClient.emit('log_auth_attempt', payload);
+    };
+
     if (!user) {
+      await logAttempt(false, 'Пользователь не существует');
       throw new UnauthorizedException();
     }
 
     const equals = await compare(dto.password, user.password);
     if (!equals) {
+      await logAttempt(false, 'Неверный пароль');
       throw new UnauthorizedException('Invalid email or password');
     }
 
@@ -91,12 +108,12 @@ export class AuthService {
       } catch (e) {
         this.logger.error(`Не удалось отправить повторное письмо: ${e.message}`);
       }
-
+      await logAttempt(false, 'Почта не подтверждена');
       throw new UnauthorizedException('Почта не подтверждена');
     }
 
     const tokens = await this.upsertTokenPair(user);
-
+    await logAttempt(true, 'Успешный вход');
     await this.redisService.set(cacheRefreshToken(tokens.refreshToken), { id: user.id }, { EX: CacheTime.day8 });
 
     this.logger.log(`refresh токен записан в базу`);
