@@ -1,6 +1,7 @@
 import contentParser from '@fastify/multipart';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import * as process from 'node:process';
 import { join } from 'path';
@@ -17,6 +18,19 @@ async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), { logger });
 
   await bootstrapSwagger(app);
+
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.RMQ,
+    options: {
+      urls: [appConfig.rabbitUrl],
+      queue: 'mail_queue',
+      queueOptions: {
+        durable: false,
+      },
+    },
+  });
+
+  await app.startAllMicroservices();
 
   app.useStaticAssets({
     root: join(__dirname, '..', 'uploads'),
