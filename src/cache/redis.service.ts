@@ -8,7 +8,7 @@ export class RedisService implements OnApplicationShutdown {
   @Inject(REDIS)
   private readonly redis: RedisClientType;
 
-  async set(key: string, value: Record<string, any>, options?: SetOptions) {
+  async set(key: string, value: Record<string, any> | string, options?: SetOptions) {
     const json = JSON.stringify(value);
 
     return this.redis.set(key, json, options);

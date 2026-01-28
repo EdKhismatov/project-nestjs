@@ -26,6 +26,13 @@ export class AuthService {
   ) {}
   // Регистрация пользователя
   async register(dto: UserCreateDto) {
+    const domain = dto.email.split('@')[1];
+    const isBad = await this.redisService.get(`bad_domain:${domain}`);
+
+    if (isBad) {
+      throw new BadRequestException('Использование временных почт запрещено!');
+    }
+
     const token = randomBytes(32).toString('hex');
 
     const userPresence = await this.userService.findOneByEmail(dto.email);
