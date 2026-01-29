@@ -41,11 +41,11 @@ export class ProductsService {
     const offset = (page - 1) * limit;
 
     const key = `${JSON.stringify(query)}`;
-    // const cashProduct = await this.redisService.get(cacheProductsAll(key));
-    // if (cashProduct) {
-    //   this.logger.log(`Достали из Redis`);
-    //   return cashProduct;
-    // }
+    const cashProduct = await this.redisService.get(cacheProductsAll(key));
+    if (cashProduct) {
+      this.logger.log(`Достали из Redis`);
+      return cashProduct;
+    }
 
     const where: any = {};
     if (search) {
