@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import * as process from 'node:process';
 import { Op } from 'sequelize';
 import { CacheTime } from '../../cache/cache.constants';
 import { cacheProductsAll, cacheProductsId, cacheProductsMy } from '../../cache/cache.keys';
 import { RedisService } from '../../cache/redis.service';
+import { appConfig } from '../../config';
 import { CategoryEntity } from '../../database/entities/category.entity';
 import { ProductsEntity } from '../../database/entities/products.entity';
 import { UserEntity } from '../../database/entities/user.entity';
@@ -41,11 +41,11 @@ export class ProductsService {
     const offset = (page - 1) * limit;
 
     const key = `${JSON.stringify(query)}`;
-    const cashProduct = await this.redisService.get(cacheProductsAll(key));
-    if (cashProduct) {
-      this.logger.log(`Достали из Redis`);
-      return cashProduct;
-    }
+    // const cashProduct = await this.redisService.get(cacheProductsAll(key));
+    // if (cashProduct) {
+    //   this.logger.log(`Достали из Redis`);
+    //   return cashProduct;
+    // }
 
     const where: any = {};
     if (search) {
@@ -60,7 +60,7 @@ export class ProductsService {
       order: [['createdAt', 'DESC']],
     });
 
-    const baseUrl = `http://localhost:${process.env.PORT}/uploads/`;
+    const baseUrl = `http://localhost:${appConfig.minio.minioPort}/${appConfig.minio.minioBucket}/`;
 
     const resultRows = rows.map((product) => {
       const productData = product.toJSON();
@@ -128,6 +128,7 @@ export class ProductsService {
     const product = await this.productsEntity.findOne({
       where: { id: idDto.id },
     });
+
     if (!product) {
       throw new NotFoundException(`Товар с ID ${idDto.id} не найден`);
     }
@@ -137,8 +138,9 @@ export class ProductsService {
     }
 
     if (product.images && product.images.length > 0) {
-      const deletePromises = product.images.map((img) => this.filesService.removeFile(img));
-      await Promise.all(deletePromises);
+      for (const fileName of product.images) {
+        await this.filesService.removeImage(fileName);
+      }
     }
 
     await this.productsEntity.destroy({ where: { id: idDto.id } });

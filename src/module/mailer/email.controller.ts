@@ -19,7 +19,7 @@ export class EmailController {
     await this.emailService.sendWelcomeEmail(data.email, data.url);
   }
 
-  @EventPattern('log_auth_attempt') // Название "канала" связи
+  @EventPattern('log_auth_attempt')
   async handleAuthLog(@Payload() data: any) {
     try {
       await this.historyEntity.create(data);
