@@ -1,18 +1,18 @@
 import { MultipartFile } from '@fastify/multipart';
-import { Injectable } from '@nestjs/common';
-import * as fs from 'fs';
-import * as path from 'path';
-import { join } from 'path';
+import { Injectable, Logger } from '@nestjs/common';
 import sharp from 'sharp';
 import { PassThrough } from 'stream';
-import { pipeline } from 'stream/promises';
 import * as uuid from 'uuid';
+import { appConfig } from '../config';
 import { BadRequestException } from '../exceptions';
+import { MinioService } from '../module/minio/minio.service';
 
 @Injectable()
 export class FilesService {
+  private readonly logger = new Logger(FilesService.name);
   private readonly ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
   private readonly MAX_SIZE = 5 * 1024 * 1024; // 5 МБ
+  constructor(private readonly minioService: MinioService) {}
 
   async createFile(file: MultipartFile): Promise<string> {
     if (!this.ALLOWED_TYPES.includes(file.mimetype)) {
@@ -20,12 +20,6 @@ export class FilesService {
     }
 
     const fileName = uuid.v4() + '.webp';
-    const uploadDir = path.resolve(__dirname, '..', '..', 'uploads');
-    const fullPath = path.join(uploadDir, fileName);
-
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
 
     const sizeValidator = new PassThrough();
     let downloadedBytes = 0;
@@ -37,20 +31,12 @@ export class FilesService {
       }
     });
 
-    try {
-      await pipeline(
-        file.file,
-        sizeValidator,
-        sharp().resize(800).webp({ quality: 80 }),
-        fs.createWriteStream(fullPath),
-      );
-      return fileName;
-    } catch (err) {
-      if (fs.existsSync(fullPath)) {
-        await fs.promises.unlink(fullPath);
-      }
-      throw err;
-    }
+    const transformer = sharp().resize(800).webp({ quality: 80 });
+
+    const processedStream = file.file.pipe(sizeValidator).pipe(transformer);
+
+    await this.minioService.uploadFile(appConfig.minio.minioBucket, fileName, processedStream as any);
+    return fileName;
   }
 
   // Новый метод для массива файлов
@@ -64,14 +50,10 @@ export class FilesService {
   }
 
   // удаление
-  async removeFile(fileName: string) {
-    try {
-      const filePath = join(__dirname, '..', '..', 'uploads', fileName);
-      await fs.promises.unlink(filePath);
-      return true;
-    } catch (e) {
-      console.error(`Ошибка при удалении файла ${fileName}:`, e.message);
-      return false;
-    }
+  async removeImage(fileName: string) {
+    return await this.minioService.deleteFile(appConfig.minio.minioBucket, fileName);
+  }
+  async onApplicationShutdown() {
+    this.logger.log('--- Завершение работы FileService ---');
   }
 }
