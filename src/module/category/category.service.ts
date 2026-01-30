@@ -5,6 +5,7 @@ import { cacheCategoriesAll, cacheCategoriesId } from '../../cache/cache.keys';
 import { RedisService } from '../../cache/redis.service';
 import { CategoryEntity } from '../../database/entities/category.entity';
 import { ProductsEntity } from '../../database/entities/products.entity';
+import { UserEntity } from '../../database/entities/user.entity';
 import { NotFoundException } from '../../exceptions';
 import { IdDto } from '../products/dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -24,9 +25,11 @@ export class CategoryService {
   ) {}
 
   // создание категории
-  async createCategory(body: CreateCategoryDto, userId: string) {
+  async createCategory(body: CreateCategoryDto, userId: UserEntity['id']) {
     try {
-      return await this.categoryEntity.create({ ...body, userId });
+      const category = await this.categoryEntity.create({ ...body, userId });
+      this.logger.log('Категория успешно создана');
+      return category;
     } catch (error) {
       if (error.name === 'SequelizeUniqueConstraintError') {
         throw new ConflictException('Категория с таким названием уже существует');

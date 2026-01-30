@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { UserEntity } from '../../database/entities/user.entity';
 import { Roles } from '../../decorators/roles.decorator';
 import { User } from '../../decorators/user.decorator';
 import { AuthGuard } from '../../guards/jwt.guard';
@@ -21,7 +22,7 @@ export class CategoryController {
   @ApiCreatedResponse({ description: 'Item loaded successfully' })
   @ApiOperation({ summary: 'Создание категории' })
   @Post('')
-  async createCategory(@Body() body: CreateCategoryDto, @User('id') id: string) {
+  async createCategory(@Body() body: CreateCategoryDto, @User('id') id: UserEntity['id']) {
     return await this.categoryService.createCategory(body, id);
   }
 
