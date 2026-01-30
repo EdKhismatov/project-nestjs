@@ -124,7 +124,7 @@ export class ProductsService {
   }
 
   // удаление товара
-  async delete(idDto: IdDto, user: IActiveUser) {
+  async delete(idDto: IdDto, user: UserEntity) {
     const product = await this.productsEntity.findOne({
       where: { id: idDto.id },
     });
@@ -142,7 +142,6 @@ export class ProductsService {
         await this.filesService.removeImage(fileName);
       }
     }
-
     await this.productsEntity.destroy({ where: { id: idDto.id } });
 
     await this.redisService.delete(cacheProductsId(idDto.id));
@@ -173,7 +172,7 @@ export class ProductsService {
   }
 
   // редактирование тавара
-  async updateMyProduct(idDto: IdDto, dto: UpdateProductDto, user: IActiveUser) {
+  async updateMyProduct(idDto: IdDto, dto: UpdateProductDto, user: UserEntity) {
     const product = await this.productsEntity.findByPk(idDto.id);
     if (!product) {
       throw new NotFoundException(`Товар с ID ${idDto.id} не найден`);
