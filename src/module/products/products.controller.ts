@@ -1,6 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Request, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiConsumes, ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { UserEntity } from '../../database/entities/user.entity';
 import { Roles } from '../../decorators/roles.decorator';
+import { User } from '../../decorators/user.decorator';
 import { BadRequestException } from '../../exceptions';
 import { AuthGuard } from '../../guards/jwt.guard';
 import { RolesUser } from '../../guards/role.guard';
@@ -80,8 +82,8 @@ export class ProductsController {
   @ApiCreatedResponse({ description: 'Item loaded successfully' })
   @ApiOperation({ summary: 'Удаление товара' })
   @Delete(':id')
-  async delete(@Param() params: IdDto, @Request() req: ProductRequest) {
-    return await this.productsService.delete(params, req.user);
+  async delete(@Param() params: IdDto, @User() user: UserEntity) {
+    return await this.productsService.delete(params, user);
   }
 
   // товары продавца
@@ -100,7 +102,7 @@ export class ProductsController {
   @ApiCreatedResponse({ description: 'Product has been edited' })
   @ApiOperation({ summary: 'Редактирование товара' })
   @Patch(':id')
-  async updateMyProduct(@Param() params: IdDto, @Body() dto: UpdateProductDto, @Request() req: ProductRequest) {
-    return await this.productsService.updateMyProduct(params, dto, req.user);
+  async updateMyProduct(@Param() params: IdDto, @Body() dto: UpdateProductDto, @User() user: UserEntity) {
+    return await this.productsService.updateMyProduct(params, dto, user);
   }
 }

@@ -1,23 +1,12 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  NotFoundException,
-  Param,
-  Patch,
-  Post,
-  Request,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../decorators/roles.decorator';
+import { User } from '../../decorators/user.decorator';
 import { AuthGuard } from '../../guards/jwt.guard';
 import { RolesUser } from '../../guards/role.guard';
 import { RolesGuard } from '../../guards/roles.guard';
 import { IdDto } from '../products/dto';
 import { CategoryService } from './category.service';
-import type { CategoryRequest } from './dto/category.types';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
@@ -32,8 +21,8 @@ export class CategoryController {
   @ApiCreatedResponse({ description: 'Item loaded successfully' })
   @ApiOperation({ summary: 'Создание категории' })
   @Post('')
-  async createCategory(@Body() body: CreateCategoryDto, @Request() req: CategoryRequest) {
-    return await this.categoryService.createCategory(body, req.user.id);
+  async createCategory(@Body() body: CreateCategoryDto, @User('id') id: string) {
+    return await this.categoryService.createCategory(body, id);
   }
 
   // получение всех категорий
