@@ -73,28 +73,28 @@ export class AuthService {
     return result;
   }
 
+  private logAttempt = async (success: boolean, result: string, ip: string, email: string) => {
+    const payload = {
+      email,
+      ip,
+      success,
+      result,
+    };
+    return this.rabbitClient.emit('log_auth_attempt', payload);
+  };
+
   // авторизация по логину и паролю
   async login(dto: LoginDto, IpAddress: string) {
     const user = await this.userService.findOneByEmail(dto.email);
 
-    const logAttempt = async (success: boolean, result: string) => {
-      const payload = {
-        email: dto.email,
-        ip: IpAddress,
-        success,
-        loginResult: result,
-      };
-      return this.rabbitClient.emit('log_auth_attempt', payload);
-    };
-
     if (!user) {
-      await logAttempt(false, 'Пользователь не существует');
+      await this.logAttempt(false, 'Пользователь не существует', IpAddress, dto.email);
       throw new UnauthorizedException();
     }
 
     const equals = await compare(dto.password, user.password);
     if (!equals) {
-      await logAttempt(false, 'Неверный пароль');
+      await this.logAttempt(false, 'Неверный пароль', IpAddress, dto.email);
       throw new UnauthorizedException('Invalid email or password');
     }
 
@@ -108,12 +108,12 @@ export class AuthService {
       } catch (e) {
         this.logger.error(`Не удалось отправить повторное письмо: ${e.message}`);
       }
-      await logAttempt(false, 'Почта не подтверждена');
+      await this.logAttempt(false, 'Почта не подтверждена', IpAddress, dto.email);
       throw new UnauthorizedException('Почта не подтверждена');
     }
 
     const tokens = await this.upsertTokenPair(user);
-    await logAttempt(true, 'Успешный вход');
+    await this.logAttempt(true, 'Успешный вход', IpAddress, dto.email);
     await this.redisService.set(cacheRefreshToken(tokens.refreshToken), { id: user.id }, { EX: CacheTime.day8 });
 
     this.logger.log(`refresh токен записан в базу`);
