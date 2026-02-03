@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
+import { InterceptorModule } from './common/interceptors/interceptor.module';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './module/auth/auth.module';
 import { CategoryModule } from './module/category/category.module';
@@ -19,6 +20,7 @@ import { CronModule } from './providers/cron/cron.module';
     ScheduleModule.forRoot(),
     CronModule,
     ThrottlerLimitModule,
+    InterceptorModule,
   ],
   controllers: [AppController],
   providers: [],
