@@ -15,7 +15,9 @@ async function bootstrap() {
   const pinoStrategy = process.env.NODE_ENV === Environment.DEV ? DEVELOPMENT_STRATEGY : PRODUCTION_STRATEGY;
   const logger = new PinoService(pinoStrategy);
 
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), { logger });
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter({ trustProxy: true }), {
+    logger,
+  });
 
   await bootstrapSwagger(app);
 
