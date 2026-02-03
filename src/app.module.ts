@@ -6,6 +6,7 @@ import { AuthModule } from './module/auth/auth.module';
 import { CategoryModule } from './module/category/category.module';
 import { EmailModule } from './module/mailer/email.module';
 import { ProductsModule } from './module/products/products.module';
+import { ThrottlerLimitModule } from './module/throttler/throttler.module';
 import { CronModule } from './providers/cron/cron.module';
 
 @Module({
@@ -17,6 +18,7 @@ import { CronModule } from './providers/cron/cron.module';
     EmailModule,
     ScheduleModule.forRoot(),
     CronModule,
+    ThrottlerLimitModule,
   ],
   controllers: [AppController],
   providers: [],

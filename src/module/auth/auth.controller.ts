@@ -1,5 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Req, Request, UseGuards } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import type { FastifyRequest } from 'fastify';
 import { AuthGuard } from '../../guards/jwt.guard';
 import { AuthService } from './auth.service';
@@ -7,6 +8,7 @@ import type { AuthenticatedRequest } from './auth.types';
 import { LoginDto, UserCreateDto } from './dto';
 import { TokenDto } from './dto/token.dto';
 
+@SkipThrottle()
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -25,6 +27,8 @@ export class AuthController {
   // авторизация
   @ApiCreatedResponse({ description: 'user authorization' })
   @ApiOperation({ summary: 'Авторизация пользователя' })
+  // @UseGuards(ThrottlerGuard)
+  @SkipThrottle({ default: false })
   @Post('login')
   async login(@Body() body: LoginDto, @Req() req: FastifyRequest) {
     const ip = req.ip;

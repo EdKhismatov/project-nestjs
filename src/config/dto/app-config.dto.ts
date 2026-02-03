@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsEnum, IsNumber, IsString, ValidateNested } from 'class-validator';
-import { JwtConfigDto, MinioDto, PostgresConfigDto, SmtpConfigDto } from './index';
+import { JwtConfigDto, MinioDto, PostgresConfigDto, SmtpConfigDto, ThrottlerDto } from './index';
 
 export enum Environment {
   PROD = 'prod',
@@ -36,4 +36,8 @@ export class AppConfigDto {
   @ValidateNested()
   @Type(() => MinioDto)
   minio: MinioDto;
+
+  @ValidateNested()
+  @Type(() => ThrottlerDto)
+  throttler: ThrottlerDto;
 }

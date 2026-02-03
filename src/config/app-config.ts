@@ -37,6 +37,10 @@ const rawConfig: EnvStructure<AppConfigDto> = {
     minioPassword: process.env.MINIO_PASSWORD,
     minioBucket: process.env.MINIO_BUCKET,
   },
+  throttler: {
+    throttlerTtl: process.env.THROTTLE_TTL,
+    throttlerLimit: process.env.THROTTLE_LIMIT,
+  },
 };
 
 export const appConfig = validate(AppConfigDto, rawConfig);
